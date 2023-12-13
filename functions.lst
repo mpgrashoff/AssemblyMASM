@@ -1,0 +1,266 @@
+     1                                  section .data
+     2 00000000 7163CF0000000000            KADD_1 dq 13591409
+     3 00000008 0000000000000000            result dq 0.0
+     4 00000010 9BA654753D5C8441            top_term dq 42698670.6663334
+     5 00000018 0000000000000000            mid_term dq 0
+     6 00000020 00                          K_6 db 0
+     7 00000021 03                          K_3 db 3
+     8 00000022 00004C3B9D475BFC            K_2 dq -262537412640768000
+     9 0000002A A62D7E2000000000            K_5 dq 545140134
+    10 00000032 00                          K db 0
+    11                                  section .text
+    12                                  
+    13                                  
+    14                                  
+    15                                  
+    16                                  global _factorial, factorial
+    17                                  ;extern int factorial(int x);
+    18                                  _factorial:
+    19                                  factorial:
+    20 00000000 53                      	push rbx                        ; save callee-save register
+    21 00000001 4889F8                  	mov	rax, rdi	                ; save x (param 1) to rax
+    22 00000004 B901000000              	mov rcx, 1                      ; initialise rcx to 1
+    23                                  
+    24                                  multiplication_loop:
+    25 00000009 4883F800                	cmp rax, 0		                ; check if bl reached 0
+    26 0000000D 7409                    	je  exit_loop_factorial         ; if yes, go to exit_loop
+    27 0000000F 480FAFC8                	imul rcx,rax                    ; multiply the curent value by rax
+    28 00000013 48FFC8                      dec rax			                ; decrement the value at address of x by one
+    29 00000016 EBF1                        jmp multiplication_loop	        ; go to replace_loop
+    30                                  
+    31                                  exit_loop_factorial:
+    32                                  	; subroutine epilogue
+    33 00000018 5B                          pop rbx				; bring back the caller's value of rbx from the stack
+    34 00000019 4889C8                      mov rax,rcx         ; return the result of rax
+    35 0000001C C3                      	ret
+    36                                  
+    37                                  
+    38                                  global _exponential, exponential
+    39                                  ;extern int exponential(int x rdi, int n rsi)
+    40                                  _exponential:
+    41                                  exponential:
+    42 0000001D 53                          push rbx                           ; save callee-save register
+    43 0000001E B801000000                  mov rax, 1          ; Initialize result to 1
+    44 00000023 4889F1                      mov rcx, rsi        ; Set counter to n
+    45                                  
+    46                                      my_function_loop:
+    47 00000026 4883F900                       cmp rcx, 0      ; Check if counter is zero
+    48 0000002A 7409                           je  my_function_end  ; If zero, exit loop
+    49 0000002C 480FAFC7                       imul rax, rdi    ; Multiply result by x
+    50 00000030 48FFC9                         dec rcx          ; Decrement counter
+    51 00000033 EBF1                           jmp my_function_loop  ; Jump to the beginning of the loop
+    52                                  
+    53                                      my_function_end:
+    54                                      ; Result is in rax
+    55 00000035 5B                          pop rbx				; bring back the caller's value of rbx from the stack
+    56 00000036 C3                      ret
+    57                                  
+    58                                  
+    59                                  
+    60                                  calculateK6:
+    61 00000037 53                          push rbx
+    62 00000038 8B0425[32000000]            mov eax, [K]            ; Load the value of n from the stack
+    63 0000003F 6BC006                      imul eax, 6             ; Multiply n by 6
+    64 00000042 57                          push rdi                ; push rdi to the stack to save it while it is beying used in the next function
+    65 00000043 4889C7                      mov rdi, rax            ; assign rdi the value of eax whichs is currently (6n)
+    66 00000046 E8B5FFFFFF                  call factorial          ; calculate (6n)!
+    67 0000004B 5F                          pop rdi                 ; restore the value of rdi
+    68 0000004C 48890425[20000000]          mov [K_6], rax          ; Save the result of (6n)! to K_6
+    69 00000054 5B                          pop rbx
+    70 00000055 C3                          ret
+    71                                  
+    72                                  calculateK5:
+    73 00000056 53                          push rbx
+    74 00000057 488B0425[32000000]          mov rax, [K]                ; Copy the value from edi to eax
+    75 0000005F 4C8B0425[2A000000]          mov r8, [K_5]
+    76 00000067 4C0FAFC0                    imul r8, rax
+    77 0000006B 4831C0                      xor rax, rax
+    78 0000006E 488B0425[00000000]          mov rax, [KADD_1]
+    79 00000076 4901C0                      add r8, rax
+    80 00000079 4831C0                      xor rax, rax
+    81 0000007C 488B0425[20000000]          mov rax, [K_6]
+    82 00000084 4C0FAFC0                    imul r8, rax
+    83 00000088 4C890425[18000000]          mov [mid_term],r8
+    84                                  ;    cvtsi2sd xmm1, [K]          ; Convert the value from eax to a double-precision floating-point value
+    85                                  ;    movsd xmm0, [K_5]           ; Load the quad-precision floating-point value from memory into xmm register
+    86                                  ;    mulsd xmm0, xmm1            ; multiply xmm0 , with xmm1
+    87                                  ;    xorps xmm1 ,xmm1
+    88                                  ;    movsd xmm0, [KADD_1]        ; move value 13591409.0 into xmm1
+    89                                  ;    addsd xmm0, xmm1            ; add (K_5*n) and KADD_1
+    90                                  ;    movsd xmm1, [K_6]           ; move k_6 (6n)! into xmm1
+    91                                  ;    mulsd xmm0,xmm1             ; multiply (6n)!*(K_5n+KADD_1)
+    92                                  ;    movsd [mid_term], xmm0      ; Store the result back into memory
+    93                                  ;    movq rax, xmm0             ; Return the contents of K_5 (xmm0 contains the result)
+    94 00000090 5B                          pop rbx
+    95 00000091 C3                          ret
+    96                                  
+    97                                  calculateK3:
+    98 00000092 53                          push rbx
+    99 00000093 8B0425[32000000]            mov eax, [K]            ; Load the value of n from the stack
+   100 0000009A 6BC003                      imul eax, 3             ; Multiply n by 3
+   101                                  
+   102 0000009D 57                          push rdi                ; push rdi to the stack to save it while it is beying used in the next function
+   103 0000009E 4889C7                      mov rdi, rax            ; assign rdi the value of rax which is currently (3n)
+   104 000000A1 E85AFFFFFF                  call factorial          ; calculate (3n)!
+   105 000000A6 5F                          pop rdi                 ; restore the value of rdi
+   106 000000A7 48890425[21000000]          mov [K_3], rax          ; Save the result of (3n)! to K_3
+   107                                  
+   108 000000AF E84CFFFFFF                  call factorial          ; callculate the factorial of n
+   109 000000B4 57                          push rdi                ; save rdi
+   110 000000B5 4889C7                      mov rdi, rax            ; assign rdi to the result of n!
+   111 000000B8 BE03000000                  mov rsi, 3              ; set the exponent
+   112 000000BD E85BFFFFFF                  call exponential        ; calculate (n!)^3
+   113 000000C2 4C8B0425[21000000]          mov R8 , [K_3]          ; load k_3 into r8 register
+   114 000000CA 4C0FAFC0                    imul R8, rax            ; calculate (3n)!*(n!)^3
+   115 000000CE 4C890425[21000000]          mov [K_3], R8           ; Save the result to K_3
+   116 000000D6 5F                          pop rdi                 ; restore rdi to n
+   117 000000D7 5B                          pop rbx
+   118 000000D8 C3                          ret
+   119                                  
+   120                                  calculateK2:
+   121 000000D9 53                          push rbx
+   122 000000DA 57                          push rdi
+   123 000000DB 488B3425[32000000]          mov rsi, [K]        ;load n from the stack
+   124 000000E3 488B3C25[22000000]          mov rdi, [K_2]
+   125 000000EB E82DFFFFFF                  call exponential
+   126 000000F0 4C8B0425[21000000]          mov R8, [K_3]
+   127 000000F8 4C0FAFC0                    imul R8, rax
+   128 000000FC 4C890425[22000000]          mov [K_2],R8
+   129 00000104 5F                          pop rdi
+   130 00000105 5B                          pop rbx
+   131 00000106 C3                          ret
+   132                                  
+   133                                  
+   134                                  
+   135                                  
+   136                                  global _term_calculation, term_calculation ; extern double term_calculation(int n)
+   137                                  _term_calculation:
+   138                                  term_calculation:
+   139 00000107 53                          push rbx
+   140 00000108 893C25[32000000]            mov [K], edi
+   141 0000010F E823FFFFFF                  call calculateK6
+   142 00000114 E83DFFFFFF                  call calculateK5
+   143 00000119 E874FFFFFF                  call calculateK3
+   144 0000011E E8B6FFFFFF                  call calculateK2
+   145                                  
+   146 00000123 F20F2A0425-                 cvtsi2sd xmm0,  [mid_term]    ; Load mid_term into xmm0
+   146 00000128 [18000000]         
+   147 0000012C F20F2A0C25-                 cvtsi2sd xmm1,  [K_2]
+   147 00000131 [22000000]         
+   148 00000135 F20F5EC1                    divsd xmm0, xmm1                ; Divide mid_term by K_2, result in xmm0
+   149 00000139 0F57C9                      xorps xmm1, xmm1
+   150 0000013C F20F100C25-                 movsd xmm1, [top_term]
+   150 00000141 [10000000]         
+   151 00000145 F20F5EC8                    divsd xmm1, xmm0
+   152 00000149 F20F10C1                    movsd  xmm0, xmm1
+   153 0000014D F20F110C25-                 movsd [result],xmm1
+   153 00000152 [08000000]         
+   154 00000156 5B                          pop rbx
+   155 00000157 C3                          ret
+   156                                  
+   157                                  
+   158                                  
+   159                                  global _test_term, test_term
+   160                                  _test_term:
+   161                                  test_term:
+   162 00000158 53                          push rbx
+   163 00000159 893C25[32000000]            mov [K], edi
+   164 00000160 E8D2FEFFFF                  call calculateK6 ; confirmed working
+   165 00000165 E8ECFEFFFF                  call calculateK5
+   166 0000016A E823FFFFFF                  call calculateK3
+   167                                  ;    call calculateK2
+   168 0000016F 488B0425[22000000]          mov rax, [K_2]
+   169 00000177 5B                          pop rbx
+   170 00000178 C3                          ret
+   171                                  
+   172                                  
+   173                                  ;section .text
+   174                                  ;    global my_double_function
+   175                                  ;
+   176                                  ;my_double_function:
+   177                                  ;    ; input: xmm0 = first double parameter
+   178                                  ;    ;        xmm1 = second double parameter
+   179                                  ;    ; output: xmm0 = return value (double)
+   180                                  ;
+   181                                  ;    ; Your assembly code here to perform the computation
+   182                                  ;    ; example: add the two double parameters
+   183                                  ;    addsd xmm0, xmm1
+   184                                  ;
+   185                                  ;    ; return
+   186                                  ;    ret
+   187                                  
+   188                                  
+   189                                  ;global _term_calculation, term_calculation
+   190                                  ;    ; extern double term_calculation(int n)
+   191                                  ;_term_calculation:
+   192                                  ;term_calculation:
+   193                                  ;    push rbx                            ; save callee-save register
+   194                                  ;
+   195                                  ;    mov R8, rsi                        ; move n to rax dividend
+   196                                  ;    mov rcx, 2                          ; set rcx to 2  divisor
+   197                                  ;
+   198                                  ;    xor rdx, rdx                           ; clear rdx
+   199                                  ;    div rcx                             ; rax = rax / rcx, rdx = rax % rcx
+   200                                  ;
+   201                                  ;    cmp rdx,0                           ; check if the remainder is one
+   202                                  ;    je remainder_is_zero ; jump if equal (remainder is zero)
+   203                                  ;    mov R9, -1           ; set rcx to -1 (remainder is not zero)
+   204                                  ;    jmp done              ; jump to the end
+   205                                  ;
+   206                                  ;    remainder_is_zero:
+   207                                  ;    mov R9, 1            ; set rcx to 1 (remainder is zero)
+   208                                  ;    jmp done
+   209                                  ;
+   210                                  ;    done:               ;code continues from here with R9 set to eighter -1 or 1
+   211                                  ;    mov rdi, 6          ; set rdi to 6
+   212                                  ;    imul rdi, R8        ; multiply rdi by n and save it to rdi
+   213                                  ;    jmp factorial       ; calculate factorial of rdi
+   214                                  ;    mov R10, rax        ; the result of factorial is put into r10
+   215                                  ;    mov R11, [k_1]      ; move k_2 to r11
+   216                                  ;    imul R11 , R8       ; multiply k1 by n
+   217                                  ;    add R11, [k_2]      ;add k2
+   218                                  ;    imul R10, R11       ; multiply the top half of the equation together into R10
+   219                                  ;                        ; this code should now conclude the calculation for the numerator of the division
+   220                                  ;
+   221                                  ;
+   222                                  ;ret
+   223                                  
+   224                                  
+   225                                  
+   226                                  
+   227                                  
+   228                                  
+   229                                  ;;global _func, func		; '_func' for compatiility with NASM for Windows
+   230                                  ;;
+   231                                  ;;
+   232                                  ;_func:
+   233                                  ;func:
+   234                                  ;	; subroutine prologue
+   235                                  ;	push rbx        	; save callee-save register
+   236                                  ;	mov	rax, rdi		; save address of *a (param 1) to rax
+   237                                  ;
+   238                                  ;	; subroutine body
+   239                                  ;replace_loop:
+   240                                  ;	mov bl, [rax]		; move value at address rax into 8bit register bl
+   241                                  ;	cmp bl, 0			; check if reached end of string
+   242                                  ;	je exit_loop		; if yes, go to exit_loop
+   243                                  ;	cmp bl, 'a'			; check if current letter is 'a'
+   244                                  ;	jne increment_loop	; if not, go to increment_loop
+   245                                  ;	mov	BYTE [rax], '*'	; it is 'a' so change it to '*'
+   246                                  ;
+   247                                  ;increment_loop:
+   248                                  ;    inc rax				; increment address of string by one byte
+   249                                  ;    jmp replace_loop	; go to replace_loop
+   250                                  ;
+   251                                  ;exit_loop:
+   252                                  ;	; subroutine epilogue
+   253                                  ;	xor	rax, rax		; rax = 0
+   254                                  ;	pop rbx				; bring back the caller's value of rbx from the stack
+   255                                  ;	ret
+   256                                  
+   257                                  ;global _somefunction, somefunction
+   258                                  ;
+   259                                  ;_somefunction:
+   260                                  ;somefunction:
+   261                                  ;    mov rax, 123
+   262                                  ;    ret
