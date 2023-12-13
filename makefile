@@ -11,10 +11,12 @@ compile: assemble main.c
 	$(CC) -m64 -c -g -O0 main.c
 
 link: compile
-	$(CC) -m64 -g -o program main.o $(ASM_SRC).o
+	$(CC) -m64 -g -o program main.o $(ASM_SRC).o -lgmp -no-pie
 
 clean:
 	rm *.o
 	rm main
 	rm $(ASM_SRC).lst
+
+
 
